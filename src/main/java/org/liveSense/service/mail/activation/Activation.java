@@ -18,8 +18,8 @@
 package org.liveSense.service.mail.activation;
 
 import javax.jcr.RepositoryException;
-import org.liveSense.service.userManager.exceptions.PrincipalIsNotUserException;
-import org.liveSense.service.userManager.exceptions.UserNotExistsException;
+import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
+import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
 
 /**
  *

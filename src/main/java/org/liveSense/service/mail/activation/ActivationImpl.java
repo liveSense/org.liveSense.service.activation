@@ -32,8 +32,8 @@ import org.apache.sling.commons.scheduler.Job;
 import org.apache.sling.commons.scheduler.Scheduler;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.jcr.base.util.AccessControlUtil;
-import org.liveSense.service.userManager.exceptions.PrincipalIsNotUserException;
-import org.liveSense.service.userManager.exceptions.UserNotExistsException;
+import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
+import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
 import org.liveSense.utils.AdministrativeService;
 import org.liveSense.utils.GenericValue;
 import org.osgi.service.component.ComponentContext;
@@ -59,6 +59,7 @@ public class ActivationImpl extends AdministrativeService implements Activation 
     /**
      * default log
      */
+	LoggerFactory fff;
     private final Logger log = LoggerFactory.getLogger(ActivationImpl.class);
 
 
