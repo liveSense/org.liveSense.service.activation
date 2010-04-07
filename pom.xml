@@ -118,7 +118,7 @@
         <dependency>
             <groupId>org.liveSense</groupId>
             <artifactId>org.liveSense.service.securityManager</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.0-SNAPSHOT</version>
             <type>bundle</type>
         </dependency>
         <dependency>
@@ -136,7 +136,7 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
-            <version>4.2.0</version>
+            <version>4.1.0</version>
             <type>jar</type>
         </dependency>
         <dependency>
