@@ -34,8 +34,8 @@ import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.jcr.base.util.AccessControlUtil;
 import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
 import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
-import org.liveSense.utils.AdministrativeService;
-import org.liveSense.utils.GenericValue;
+import org.liveSense.core.AdministrativeService;
+import org.liveSense.core.wrapper.GenericValue;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,13 +54,12 @@ import org.slf4j.LoggerFactory;
  * @scr.service
  * @
  */
-public class ActivationImpl extends AdministrativeService implements Activation {
+public class ActivationServiceImpl extends AdministrativeService implements ActivationService {
 
     /**
      * default log
      */
-	LoggerFactory fff;
-    private final Logger log = LoggerFactory.getLogger(ActivationImpl.class);
+    private final Logger log = LoggerFactory.getLogger(ActivationServiceImpl.class);
 
 
     /**
@@ -113,7 +112,7 @@ public class ActivationImpl extends AdministrativeService implements Activation 
      * @param componentContext The OSGi <code>ComponentContext</code> of this
      *            component.
     */
-    protected void activate(ComponentContext componentContext) {
+    protected void activate(ComponentContext componentContext) throws RepositoryException {
         Dictionary<?, ?> props = componentContext.getProperties();
 
         // ACTIVATION PATH
@@ -152,19 +151,27 @@ public class ActivationImpl extends AdministrativeService implements Activation 
 
         // Checking activation folder exists
         // If doesn't we create it
-        try {
-            Session session = getAdministrativeSession(repository);
-            if (!session.getRootNode().hasNode(activationPath)) {
-                Node actNode = session.getRootNode().addNode(activationPath,"sling:Folder");
-                actNode.setProperty("sling:resourceType", "liveSense/ActivationFolder");
-                if (session.hasPendingChanges()) {
-                    session.save();
-                }
+        Session session = getAdministrativeSession(repository);
+
+        if (activationPath.startsWith("/")) activationPath = activationPath.substring(1);
+        if (activationPath.endsWith("/")) activationPath = activationPath.substring(0, activationPath.length()-1);
+
+        String[] spool = activationPath.split("/");
+        Node node = session.getRootNode();
+        for (int i = 0; i < spool.length; i++) {
+            String name = spool[i];
+            if (!"".equals(name) && !node.hasNode(name)) {
+                node = node.addNode(name, "nt:unstructured");
+                node.setProperty("sling:resourceType", "liveSense/activationFolder");
+                log.info("Creating: {}",node.getPath());
+            } else {
+                if (!"".equals(name)) node = node.getNode(name);
             }
-            releaseAdministrativeSession(session);
-        } catch (RepositoryException ex) {
-            log.error("Could not create Activation Folder: /"+activationPath, ex);
         }
+        if (session.hasPendingChanges()) {
+            session.save();
+        }
+
 
     }
 
@@ -204,120 +211,65 @@ public class ActivationImpl extends AdministrativeService implements Activation 
         }
     }
 
-    public void addActivationCode(String userName, final String activationCode)
-            throws UserNotExistsException, PrincipalIsNotUserException,
-            RepositoryException {
-        Session selfRegSession = null;
+    public void addActivationCode(Session session, String userName, final String activationCode)
+            throws RepositoryException {
         String prop = null;
 
         try {
-            selfRegSession = getAdministrativeSession(repository);
+			Node activationNode = session.getRootNode().getNode(activationPath).addNode(activationCode,"nt:unstructured");
+            activationNode.setProperty("sling:resourceType", "liveSense/ActivationCode");
+            activationNode.setProperty("user", userName);
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.SECOND, activationExpire.intValue());
+            activationNode.setProperty("expire", cal.getTimeInMillis());
 
-            UserManager userManager = AccessControlUtil.getUserManager(selfRegSession);
-            Authorizable authorizable = userManager.getAuthorizable(userName);
-
-            if (authorizable == null) {
-                // user already exists!
-                throw new UserNotExistsException(
-                        "User does not exists: "
-                        + userName);
-            } else {
-                if (authorizable.isGroup()) {
-                    throw new PrincipalIsNotUserException("Principal is not user: " + userName);
-                }
-                User user = (User) authorizable;
-
-                Node activationNode = selfRegSession.getRootNode().getNode(activationPath).addNode(userName,"nt:unstructured");
-                activationNode.setProperty("sling:resourceType", "liveSense/ActivationCode");
-                activationNode.setProperty("user", userName);
-                Calendar cal = Calendar.getInstance();
-                cal.add(Calendar.SECOND, activationExpire.intValue());
-                activationNode.setProperty("expire", cal.getTimeInMillis());
-                //user.setProperty("activation_code", GenericValue.getGenericValueFromObject(activationCode).get(1));
-                user.setProperty("status", GenericValue.getGenericValueFromObject("PENDING").get(1));
-
-                if (selfRegSession.hasPendingChanges()) {
-                    selfRegSession.save();
-                }
-
+            if (session.hasPendingChanges()) {
+                session.save();
             }
+
         } catch (RepositoryException e) {
             throw e;
         } finally {
-            releaseAdministrativeSession(selfRegSession);
         }
     }
 
-    public String getActivationCode(String userName)
-            throws UserNotExistsException, PrincipalIsNotUserException,
+    public boolean checkActivationCode(Session session, String userName, String activationCode)
+            throws 
             RepositoryException {
-        Session selfRegSession = null;
         String prop = null;
 
         try {
-            selfRegSession = getAdministrativeSession(repository);
-
-            UserManager userManager = AccessControlUtil.getUserManager(selfRegSession);
-            Authorizable authorizable = userManager.getAuthorizable(userName);
-
-            if (authorizable == null) {
-                // user already exists!
-                throw new UserNotExistsException(
-                        "User does not exists: "
-                        + userName);
-            } else {
-                if (authorizable.isGroup()) {
-                    throw new PrincipalIsNotUserException("Principal is not user: " + userName);
-                }
-                User user = (User) authorizable;
-                if (user.hasProperty("activation_code")) {
-                    prop = user.getProperty("activation_code")[0].getString();
-                }
-            }
-        } catch (RepositoryException e) {
+			if (!session.getRootNode().hasNode(activationPath))
+				return false;
+			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
+				return false;
+			if (!session.getRootNode().getNode(activationPath).getNode(activationCode).getProperty("user").getString().equals(userName))
+				return false;
+			return true;
+		} catch (RepositoryException e) {
             throw e;
         } finally {
-            releaseAdministrativeSession(selfRegSession);
         }
-        return prop;
     }
 
-    public String removeActivationCode(String userName)
-            throws UserNotExistsException, PrincipalIsNotUserException,
-            RepositoryException {
-        Session selfRegSession = null;
+    public boolean removeActivationCode(Session session, String activationCode)
+            throws RepositoryException {
         String prop = null;
 
         try {
-            selfRegSession = getAdministrativeSession(repository);
+			if (!session.getRootNode().hasNode(activationPath)) {
+				return false;
+			}
+			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode)) {
+				return false;
+			} else {
+				session.getRootNode().getNode(activationPath).getNode(activationCode).remove();
+				return true;
+			}
 
-            UserManager userManager = AccessControlUtil.getUserManager(selfRegSession);
-            Authorizable authorizable = userManager.getAuthorizable(userName);
-
-            if (authorizable == null) {
-                // user already exists!
-                throw new UserNotExistsException(
-                        "User does not exists: "
-                        + userName);
-            } else {
-                if (authorizable.isGroup()) {
-                    throw new PrincipalIsNotUserException("Principal is not user: " + userName);
-                }
-                User user = (User) authorizable;
-                if (user.hasProperty("activation_code")) {
-                    user.setProperty("activation_code", (Value) null);
-                }
-                if (selfRegSession.hasPendingChanges()) {
-                    selfRegSession.save();
-                }
-
-            }
-        } catch (RepositoryException e) {
+		} catch (RepositoryException e) {
             throw e;
         } finally {
-            releaseAdministrativeSession(selfRegSession);
         }
-        return prop;
     }
-
 }
