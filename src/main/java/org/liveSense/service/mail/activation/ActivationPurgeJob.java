@@ -26,7 +26,7 @@ import javax.jcr.query.QueryManager;
 import org.apache.sling.commons.scheduler.Job;
 import org.apache.sling.commons.scheduler.JobContext;
 import org.apache.sling.jcr.api.SlingRepository;
-import org.liveSense.utils.AdministrativeService;
+import org.liveSense.core.AdministrativeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
