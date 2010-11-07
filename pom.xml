@@ -74,7 +74,7 @@
                     <instructions>
 
                         <Export-Package>
-                            org.liveSense.service.mail.activation.*;version=${pom.version}
+                            org.liveSense.service.mail.activation.*;version=${project.version}
                         </Export-Package>
 
                     </instructions>
@@ -147,62 +147,6 @@
             <type>jar</type>
         </dependency>
     </dependencies>
-	<profiles>
-		<profile>
-			<id>git-push</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>1.1</version>
-						<executions>
-							<execution>
-								<goals>
-									<goal>exec</goal>
-								</goals>
-							</execution>
-						</executions>
-						<configuration>
-							<executable>git</executable>
-							<arguments>
-								<argument>push</argument>
-								<argument>origin</argument>
-								<argument>master</argument>
-							</arguments>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		<profile>
-			<id>git-pull</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>1.1</version>
-						<executions>
-							<execution>
-								<goals>
-									<goal>exec</goal>
-								</goals>
-							</execution>
-						</executions>
-						<configuration>
-							<executable>git</executable>
-							<arguments>
-								<argument>pull</argument>
-								<argument>origin</argument>
-								<argument>master</argument>
-							</arguments>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
 </project>
 
 
