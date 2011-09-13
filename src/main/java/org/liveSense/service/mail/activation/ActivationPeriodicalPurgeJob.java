@@ -17,43 +17,68 @@
 
 package org.liveSense.service.mail.activation;
 
+import java.util.Dictionary;
+
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
-import org.apache.sling.commons.scheduler.Job;
-import org.apache.sling.commons.scheduler.JobContext;
+
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.ConfigurationPolicy;
+import org.apache.felix.scr.annotations.Properties;
+import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
-import org.liveSense.core.AdministrativeService;
+import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author Robert Csakany (robson@semmi.se)
- * @created Feb 13, 2010
- */
-public class ActivationPurgeJob extends AdministrativeService implements Job {
+@Component(label="%activationPeriodicalPurgeJob.name",
+	description="%activationPeriodicalPurgeJob.description",
+	immediate=true,
+	metatype=true,
+	policy=ConfigurationPolicy.OPTIONAL)
+@Service(value=java.lang.Runnable.class)
+@Properties(value = {
+	@Property(
+			name="scheduler.name", 
+			value="ActivationPeriodicalPurgeJob"),
+	@Property(
+			name="scheduler.expression", 
+			value="0 0 * ? * * "),
+	@Property(name=ActivationServiceImpl.PARAM_ACTIVATION_PATH,
+			label="%activationPath.name",
+			value=ActivationServiceImpl.DEFAULT_ACTIVATION_PATH)
+})
+public class ActivationPeriodicalPurgeJob implements Runnable {
 
     /**
      * default log
      */
-    private final Logger log = LoggerFactory.getLogger(ActivationPurgeJob.class);
+    private final Logger log = LoggerFactory.getLogger(ActivationPeriodicalPurgeJob.class);
 
+    @Reference
     private SlingRepository repository;
 
     String activationPath;
 
-    public ActivationPurgeJob(SlingRepository repository, String activationPath) {
-        this.activationPath = activationPath;
-        this.repository = repository;
+    @Activate
+    protected void activate(ComponentContext componentContext) throws RepositoryException {
+        Dictionary<?, ?> props = componentContext.getProperties();
+
+        activationPath = OsgiUtil.toString(props.get(ActivationServiceImpl.PARAM_ACTIVATION_PATH), ActivationServiceImpl.DEFAULT_ACTIVATION_PATH);
     }
 
-    public void execute(JobContext context) {
-        try {
-            Session session = getAdministrativeSession(repository);
+    public void run() {
+        Session session = null;
+    	try {
+            session = repository.loginAdministrative(null);
             
             // Search for expired Activations
             String query = 
@@ -76,10 +101,11 @@ public class ActivationPurgeJob extends AdministrativeService implements Job {
                 session.save();
             }
             
-            releaseAdministrativeSession(session);
-
         } catch (RepositoryException ex) {
             log.error("Repository error in ActivationPurgeJob ",ex);
+        } finally {
+        	if (session != null)
+        		session.logout();
         }
     }
 

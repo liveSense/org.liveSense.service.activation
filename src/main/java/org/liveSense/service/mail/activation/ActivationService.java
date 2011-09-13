@@ -17,6 +17,8 @@
 
 package org.liveSense.service.mail.activation;
 
+import java.util.Map;
+
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
@@ -29,7 +31,7 @@ import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
 public interface ActivationService {
 
 	public void addActivationCode(Session session, String userName, String activationCode) throws RepositoryException;
+	public void addActivationCode(Session session, String userName, String activationCode, @SuppressWarnings("rawtypes") Map fields) throws RepositoryException;
 	public boolean checkActivationCode(Session session, String userName, String activationCode) throws RepositoryException;
 	public boolean removeActivationCode(Session session, String activationCode) throws RepositoryException;
-	
 }

@@ -16,87 +16,61 @@
  */
 package org.liveSense.service.mail.activation;
 
-import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Calendar;
 import java.util.Dictionary;
-import java.util.HashMap;
 import java.util.Map;
+
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
-import javax.jcr.Value;
-import org.apache.jackrabbit.api.security.user.Authorizable;
-import org.apache.jackrabbit.api.security.user.User;
-import org.apache.jackrabbit.api.security.user.UserManager;
-import org.apache.sling.commons.scheduler.Job;
-import org.apache.sling.commons.scheduler.Scheduler;
+
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Properties;
+import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
-import org.apache.sling.jcr.base.util.AccessControlUtil;
-import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
-import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
-import org.liveSense.core.AdministrativeService;
-import org.liveSense.core.wrapper.GenericValue;
+import org.liveSense.core.wrapper.JcrNodeTransformer;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author Robert Csakany (robson@semmi.se)
- * @created Feb 12, 2010
- */
 
-
-/**
- * @scr.component label="%service.name"
- *                description="%service.description"
- *                immediate="true"
- * @scr.service
- * @
- */
-public class ActivationServiceImpl extends AdministrativeService implements ActivationService {
+@Component(label="%service.name", 
+			description="%service.description",
+			immediate = true,
+			metatype = true)
+@Service(value=ActivationService.class)
+@Properties(value={
+		@Property(name=ActivationServiceImpl.PARAM_ACTIVATION_PATH,
+				label="%activationPath.name",
+				value=ActivationServiceImpl.DEFAULT_ACTIVATION_PATH),
+		
+		@Property(name=ActivationServiceImpl.PARAM_ACTIVATION_EXPIRE,
+				label="%activationExpire.name",
+				longValue=ActivationServiceImpl.DEFAULT_ACTIVATION_EXPIRE)
+})
+			
+public class ActivationServiceImpl implements ActivationService {
 
     /**
      * default log
      */
     private final Logger log = LoggerFactory.getLogger(ActivationServiceImpl.class);
 
-
-    /**
-     * @scr.property    label="%activationPath.name"
-     *                  description="%activationPath.description"
-     *                  valueRef="DEFAULT_ACTIVATION_PATH"
-     */
     public static final String PARAM_ACTIVATION_PATH = "activationPath";
     public static final String DEFAULT_ACTIVATION_PATH = "activation";
-    private String activationPath = DEFAULT_ACTIVATION_PATH;
 
-
-    /**
-     * @scr.property    label="%activationExpire.name"
-     *                  description="%activationExpire.description"
-     *                  valueRef="DEFAULT_ACTIVATION_EXPIRE"
-     */
     public static final String PARAM_ACTIVATION_EXPIRE = "activationExpire";
-    public static final Long DEFAULT_ACTIVATION_EXPIRE = new Long(60*60*24);
+    public static final long DEFAULT_ACTIVATION_EXPIRE = 60*60*24;
+ 
+    private String activationPath = DEFAULT_ACTIVATION_PATH;
     private Long activationExpire = DEFAULT_ACTIVATION_EXPIRE;
-    
 
-    /**
-     * @scr.property    label="%activationPurgeJobPeriod.name"
-     *                  description="%activationPurgeJobPeriod.description"
-     *                  valueRef="DEFAULT_ACTIVATION_PURGE_JOB_PERIOD"
-     */
-    public static final String PARAM_ACTIVATION_PURGE_JOB_PERIOD = "activationPurgeJobPeriod";
-    public static final Long DEFAULT_ACTIVATION_PURGE_JOB_PERIOD = new Long(5);
-    private Long activationPurgeJobPeriod = DEFAULT_ACTIVATION_PURGE_JOB_PERIOD;
-  
-
-    /**
-     * The JCR Repository we access to resolve resources
-     *
-     * @scr.reference
-     */
+    @Reference
     private SlingRepository repository;
 
 
@@ -112,106 +86,51 @@ public class ActivationServiceImpl extends AdministrativeService implements Acti
      * @param componentContext The OSGi <code>ComponentContext</code> of this
      *            component.
     */
+    @Activate
     protected void activate(ComponentContext componentContext) throws RepositoryException {
         Dictionary<?, ?> props = componentContext.getProperties();
 
-        // ACTIVATION PATH
-        String activationPathNew = (String) componentContext.getProperties().get(PARAM_ACTIVATION_PATH);
-        if (activationPathNew == null || activationPathNew.length() == 0) {
-            activationPathNew = DEFAULT_ACTIVATION_PATH;
-        }
-        if (!activationPathNew.equals(this.activationPath)) {
-            log.info("Setting new activationPath {} (was {})", activationPathNew, this.activationPath);
-            this.activationPath = activationPathNew;
-        }
-
-        // ACTIVATION EXPIRE
-        Long activationExpireNew = (Long) componentContext.getProperties().get(PARAM_ACTIVATION_EXPIRE);
-        if (activationExpireNew == null || activationExpireNew == 0) {
-            activationExpireNew = DEFAULT_ACTIVATION_EXPIRE;
-        }
-        if (!activationExpireNew.equals(this.activationExpire)) {
-            log.info("Setting new activationExpire {} (was {})", activationExpireNew, this.activationExpire);
-            this.activationExpire = activationExpireNew;
-        }
-
-        // ACTIVATION PURGE JOB PERIOD
-        Long activationPurgeJobPeriodNew = (Long) componentContext.getProperties().get(PARAM_ACTIVATION_PURGE_JOB_PERIOD);
-        if (activationPurgeJobPeriodNew == null || activationPurgeJobPeriodNew == 0) {
-            activationPurgeJobPeriodNew = DEFAULT_ACTIVATION_PURGE_JOB_PERIOD;
-        }
-        if (!activationPurgeJobPeriodNew.equals(this.activationPurgeJobPeriod)) {
-            log.info("Setting new activationPurgeJobPeriod {} (was {})", activationPurgeJobPeriodNew, this.activationPurgeJobPeriod);
-            this.activationPurgeJobPeriod = activationPurgeJobPeriodNew;
-            stopActivationSchedulerJob();
-            startActivationSchedulerJob();
-        } else {
-            startActivationSchedulerJob();
-        }
+        activationPath = OsgiUtil.toString(props.get(PARAM_ACTIVATION_PATH), DEFAULT_ACTIVATION_PATH);
+        activationExpire = OsgiUtil.toLong(props.get(PARAM_ACTIVATION_EXPIRE), DEFAULT_ACTIVATION_EXPIRE);
+  //      stopActivationSchedulerJob();
+  //      startActivationSchedulerJob();
 
         // Checking activation folder exists
         // If doesn't we create it
-        Session session = getAdministrativeSession(repository);
-
-        if (activationPath.startsWith("/")) activationPath = activationPath.substring(1);
-        if (activationPath.endsWith("/")) activationPath = activationPath.substring(0, activationPath.length()-1);
-
-        String[] spool = activationPath.split("/");
-        Node node = session.getRootNode();
-        for (int i = 0; i < spool.length; i++) {
-            String name = spool[i];
-            if (!"".equals(name) && !node.hasNode(name)) {
-                node = node.addNode(name, "nt:unstructured");
-                node.setProperty("sling:resourceType", "liveSense/activationFolder");
-                log.info("Creating: {}",node.getPath());
-            } else {
-                if (!"".equals(name)) node = node.getNode(name);
-            }
-        }
-        if (session.hasPendingChanges()) {
-            session.save();
-        }
-
-
-    }
-
-
-
-    /**
-    *   @scr.reference policy="static"
-    *      interface="org.apache.sling.commons.scheduler.Scheduler"
-    *      bind="bindScheduler"
-    **/
-    protected Scheduler scheduler;
-
-    protected void bindScheduler(Scheduler scheduler) throws Exception {
-        this.scheduler = scheduler;
-    }
-
-
-    public void startActivationSchedulerJob() {
-        log.info("Starting activationPurgeJob");
-
-        Map<String, Serializable> config = new HashMap<String, Serializable>();
-        //set any configuration options in the config map here
-        Job job = new ActivationPurgeJob(repository, activationPath);
+        Session session = null;
         try {
-            scheduler.addPeriodicJob("activationPurgeJob", job, config, activationPurgeJobPeriod, false);
-        } catch(Throwable th) {
-            log.error("Cannot start activationPurgeJob", th);
-        }
+        	session = repository.loginAdministrative(null);
+
+	        if (activationPath.startsWith("/")) activationPath = activationPath.substring(1);
+	        if (activationPath.endsWith("/")) activationPath = activationPath.substring(0, activationPath.length()-1);
+
+	        String[] spool = activationPath.split("/");
+	        Node node = session.getRootNode();
+	        for (int i = 0; i < spool.length; i++) {
+	            String name = spool[i];
+	            if (!"".equals(name) && !node.hasNode(name)) {
+	                node = node.addNode(name, "nt:unstructured");
+	                node.setProperty("sling:resourceType", "liveSense/activationFolder");
+	                log.info("Creating: {}",node.getPath());
+	            } else {
+	                if (!"".equals(name)) node = node.getNode(name);
+	            }
+	        }
+	        if (session.hasPendingChanges()) {
+	            session.save();
+	        }
+        } catch (RepositoryException e) {
+        	log.error("Activate failed", e);
+		} finally {
+			if (session != null) session.logout();
+		}
     }
 
-    public void stopActivationSchedulerJob() {
-        log.info("Stopping activationPurgeJob");
-        try {
-            scheduler.removeJob("activationPurgeJob");
-        } catch(Throwable th) {
-            log.error("Cannot stop activationPurgeJob", th);
-        }
+    public void addActivationCode(Session session, String userName, final String activationCode) throws RepositoryException {
+    	addActivationCode(session, userName, activationCode, null);
     }
 
-    public void addActivationCode(Session session, String userName, final String activationCode)
+    public void addActivationCode(Session session, String userName, final String activationCode, @SuppressWarnings("rawtypes") Map fields)
             throws RepositoryException {
         String prop = null;
 
@@ -222,7 +141,21 @@ public class ActivationServiceImpl extends AdministrativeService implements Acti
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.SECOND, activationExpire.intValue());
             activationNode.setProperty("expire", cal.getTimeInMillis());
-
+            
+            if (fields != null) {
+            	try {
+					JcrNodeTransformer.transformMapToNode(activationNode, fields, null);
+				} catch (InstantiationException e) {
+					log.error("Error converting map to node", e);
+				} catch (IllegalAccessException e) {
+					log.error("Error converting map to node", e);
+				} catch (InvocationTargetException e) {
+					log.error("Error converting map to node", e);
+				} catch (NoSuchMethodException e) {
+					log.error("Error converting map to node", e);
+				}
+            }
+   
             if (session.hasPendingChanges()) {
                 session.save();
             }
