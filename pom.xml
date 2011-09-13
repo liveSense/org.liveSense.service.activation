@@ -30,7 +30,6 @@
       <developerConnection>scm:git:git://github.com/liveSense/org.liveSense.service.activation.git</developerConnection>
       <url>https://github.com/liveSense/org.liveSense.service.activation</url>
   </scm>  
-    <groupId>org.liveSense</groupId>
     <artifactId>org.liveSense.service.activation</artifactId>
     <packaging>bundle</packaging>
     <version>1.0.1-SNAPSHOT</version>
@@ -101,6 +100,10 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+        	<groupId>org.apache.felix</groupId>
+        	<artifactId>org.apache.felix.scr.annotations</artifactId>
         </dependency>
     </dependencies>
 </project>
