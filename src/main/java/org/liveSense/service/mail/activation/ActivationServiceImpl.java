@@ -19,9 +19,11 @@ package org.liveSense.service.mail.activation;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Calendar;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.jcr.Node;
+import javax.jcr.PropertyIterator;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
@@ -34,6 +36,7 @@ import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.liveSense.core.wrapper.JcrNodeTransformer;
+import org.liveSense.core.wrapper.JcrNodeWrapper;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,6 +129,15 @@ public class ActivationServiceImpl implements ActivationService {
 		}
     }
 
+    public void addActivationCode(Session session, final String activationCode) throws RepositoryException {
+    	addActivationCode(session, null, activationCode, null);
+    }
+
+    public void addActivationCode(Session session, final String activationCode, @SuppressWarnings("rawtypes") Map fields) throws RepositoryException {
+    	addActivationCode(session, null, activationCode, fields);
+    }
+
+    
     public void addActivationCode(Session session, String userName, final String activationCode) throws RepositoryException {
     	addActivationCode(session, userName, activationCode, null);
     }
@@ -137,7 +149,7 @@ public class ActivationServiceImpl implements ActivationService {
         try {
 			Node activationNode = session.getRootNode().getNode(activationPath).addNode(activationCode,"nt:unstructured");
             activationNode.setProperty("sling:resourceType", "liveSense/ActivationCode");
-            activationNode.setProperty("user", userName);
+            if (userName != null) activationNode.setProperty("user", userName);
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.SECOND, activationExpire.intValue());
             activationNode.setProperty("expire", cal.getTimeInMillis());
@@ -166,6 +178,20 @@ public class ActivationServiceImpl implements ActivationService {
         }
     }
 
+    public JcrNodeWrapper getActivationFields(Session session, String activationCode) throws RepositoryException {
+        try {
+			if (!session.getRootNode().hasNode(activationPath))
+				return null;
+			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
+				return null;
+			
+			return new JcrNodeWrapper(session.getRootNode().getNode(activationPath).getNode(activationCode));
+		} catch (RepositoryException e) {
+            throw e;
+        } finally {
+        }
+    }
+    
     public boolean checkActivationCode(Session session, String userName, String activationCode)
             throws 
             RepositoryException {
@@ -177,6 +203,23 @@ public class ActivationServiceImpl implements ActivationService {
 			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
 				return false;
 			if (!session.getRootNode().getNode(activationPath).getNode(activationCode).getProperty("user").getString().equals(userName))
+				return false;
+			return true;
+		} catch (RepositoryException e) {
+            throw e;
+        } finally {
+        }
+    }
+
+    public boolean checkActivationCode(Session session, String activationCode)
+            throws 
+            RepositoryException {
+        String prop = null;
+
+        try {
+			if (!session.getRootNode().hasNode(activationPath))
+				return false;
+			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
 				return false;
 			return true;
 		} catch (RepositoryException e) {
