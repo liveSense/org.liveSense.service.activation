@@ -33,7 +33,7 @@
     <artifactId>org.liveSense.service.activation</artifactId>
     <packaging>bundle</packaging>
     <version>1.0.1-SNAPSHOT</version>
-    <name>liveSense Mail activation service</name>
+    <name>liveSense :: Service :: Activation</name>
     <build>
         <plugins>
 
