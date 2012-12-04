@@ -32,6 +32,8 @@ import org.apache.felix.scr.annotations.ConfigurationPolicy;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.felix.scr.annotations.ReferencePolicy;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
@@ -63,7 +65,7 @@ public class ActivationPeriodicalPurgeJob implements Runnable {
      */
     private final Logger log = LoggerFactory.getLogger(ActivationPeriodicalPurgeJob.class);
 
-    @Reference
+	@Reference(cardinality=ReferenceCardinality.MANDATORY_UNARY, policy=ReferencePolicy.DYNAMIC)
     private SlingRepository repository;
 
     String activationPath;
