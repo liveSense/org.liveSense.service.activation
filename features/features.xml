@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?><features name="liveSense-${liveSense.version}-service-activation" xmlns="http://karaf.apache.org/xmlns/features/v1.0.0">
+	<feature name="liveSense-service-activation" version="${liveSense.service.activation.version}" description="liveSense service activation">
+        <feature>liveSense-core-base</feature>
+		<bundle>mvn:com.github.livesense/org.liveSense.service.activation/${liveSense.service.activation.version}</bundle>
+	</feature>
+</features>
