@@ -23,9 +23,11 @@
   <parent>
       <groupId>com.github.livesense</groupId>
       <artifactId>org.liveSense.parent</artifactId>
-      <version>2-SNAPSHOT</version>
+      <version>1.0.3</version>
 		<relativePath>..</relativePath>
   </parent>
+  <version>1.0.3-SNAPSHOT</version>
+
 	<scm>
 		<connection>scm:git:https://github.com/liveSense/org.liveSense.service.activation.git</connection>
 		<developerConnection>scm:git:https://github.com/liveSense/org.liveSense.service.activation.git</developerConnection>
@@ -33,7 +35,6 @@
 	</scm>
     <artifactId>org.liveSense.service.activation</artifactId>
     <packaging>bundle</packaging>
-    <version>1.0.1-SNAPSHOT</version>
     <name>liveSense :: Service :: Activation</name>
     <description>liveSense Activation service. For registration and activation codes.</description> 
     <build>
