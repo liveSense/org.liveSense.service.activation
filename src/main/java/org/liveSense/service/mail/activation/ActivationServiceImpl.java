@@ -37,8 +37,8 @@ import org.apache.felix.scr.annotations.ReferencePolicy;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.OsgiUtil;
 import org.apache.sling.jcr.api.SlingRepository;
-import org.liveSense.core.wrapper.JcrNodeTransformer;
-import org.liveSense.core.wrapper.JcrNodeWrapper;
+import org.liveSense.misc.jcrWrapper.JcrNodeTransformer;
+import org.liveSense.misc.jcrWrapper.JcrNodeWrapper;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,103 +61,103 @@ import org.slf4j.LoggerFactory;
 			
 public class ActivationServiceImpl implements ActivationService {
 
-    /**
-     * default log
-     */
-    private final Logger log = LoggerFactory.getLogger(ActivationServiceImpl.class);
+	/**
+	 * default log
+	 */
+	private final Logger log = LoggerFactory.getLogger(ActivationServiceImpl.class);
 
-    public static final String PARAM_ACTIVATION_PATH = "activationPath";
-    public static final String DEFAULT_ACTIVATION_PATH = "activation";
+	public static final String PARAM_ACTIVATION_PATH = "activationPath";
+	public static final String DEFAULT_ACTIVATION_PATH = "activation";
 
-    public static final String PARAM_ACTIVATION_EXPIRE = "activationExpire";
-    public static final long DEFAULT_ACTIVATION_EXPIRE = 60*60*24;
+	public static final String PARAM_ACTIVATION_EXPIRE = "activationExpire";
+	public static final long DEFAULT_ACTIVATION_EXPIRE = 60*60*24;
  
-    private String activationPath = DEFAULT_ACTIVATION_PATH;
-    private Long activationExpire = DEFAULT_ACTIVATION_EXPIRE;
+	private String activationPath = DEFAULT_ACTIVATION_PATH;
+	private Long activationExpire = DEFAULT_ACTIVATION_EXPIRE;
 
 	@Reference(cardinality=ReferenceCardinality.MANDATORY_UNARY, policy=ReferencePolicy.DYNAMIC)
-    private SlingRepository repository;
+	private SlingRepository repository;
 
 
-            //
-        String PARAM_CONTENT_PATH="";
-        String[] DEFAULT_CONTENT_PATH={};
+			//
+		String PARAM_CONTENT_PATH="";
+		String[] DEFAULT_CONTENT_PATH={};
 
-        String[] contentPath={};
+		String[] contentPath={};
 
-    /**
-     * Activates this component.
-     *
-     * @param componentContext The OSGi <code>ComponentContext</code> of this
-     *            component.
-    */
-    @Activate
-    protected void activate(ComponentContext componentContext) throws RepositoryException {
-        Dictionary<?, ?> props = componentContext.getProperties();
+	/**
+	 * Activates this component.
+	 *
+	 * @param componentContext The OSGi <code>ComponentContext</code> of this
+	 *            component.
+	*/
+	@Activate
+	protected void activate(ComponentContext componentContext) throws RepositoryException {
+		Dictionary<?, ?> props = componentContext.getProperties();
 
-        activationPath = OsgiUtil.toString(props.get(PARAM_ACTIVATION_PATH), DEFAULT_ACTIVATION_PATH);
-        activationExpire = OsgiUtil.toLong(props.get(PARAM_ACTIVATION_EXPIRE), DEFAULT_ACTIVATION_EXPIRE);
+		activationPath = OsgiUtil.toString(props.get(PARAM_ACTIVATION_PATH), DEFAULT_ACTIVATION_PATH);
+		activationExpire = OsgiUtil.toLong(props.get(PARAM_ACTIVATION_EXPIRE), DEFAULT_ACTIVATION_EXPIRE);
   //      stopActivationSchedulerJob();
   //      startActivationSchedulerJob();
 
-        // Checking activation folder exists
-        // If doesn't we create it
-        Session session = null;
-        try {
-        	session = repository.loginAdministrative(null);
+		// Checking activation folder exists
+		// If doesn't we create it
+		Session session = null;
+		try {
+			session = repository.loginAdministrative(null);
 
-	        if (activationPath.startsWith("/")) activationPath = activationPath.substring(1);
-	        if (activationPath.endsWith("/")) activationPath = activationPath.substring(0, activationPath.length()-1);
+			if (activationPath.startsWith("/")) activationPath = activationPath.substring(1);
+			if (activationPath.endsWith("/")) activationPath = activationPath.substring(0, activationPath.length()-1);
 
-	        String[] spool = activationPath.split("/");
-	        Node node = session.getRootNode();
-	        for (int i = 0; i < spool.length; i++) {
-	            String name = spool[i];
-	            if (!"".equals(name) && !node.hasNode(name)) {
-	                node = node.addNode(name, "nt:unstructured");
-	                node.setProperty("sling:resourceType", "liveSense/activationFolder");
-	                log.info("Creating: {}",node.getPath());
-	            } else {
-	                if (!"".equals(name)) node = node.getNode(name);
-	            }
-	        }
-	        if (session.hasPendingChanges()) {
-	            session.save();
-	        }
-        } catch (RepositoryException e) {
-        	log.error("Activate failed", e);
+			String[] spool = activationPath.split("/");
+			Node node = session.getRootNode();
+			for (int i = 0; i < spool.length; i++) {
+				String name = spool[i];
+				if (!"".equals(name) && !node.hasNode(name)) {
+					node = node.addNode(name, "nt:unstructured");
+					node.setProperty("sling:resourceType", "liveSense/activationFolder");
+					log.info("Creating: {}",node.getPath());
+				} else {
+					if (!"".equals(name)) node = node.getNode(name);
+				}
+			}
+			if (session.hasPendingChanges()) {
+				session.save();
+			}
+		} catch (RepositoryException e) {
+			log.error("Activate failed", e);
 		} finally {
 			if (session != null) session.logout();
 		}
-    }
+	}
 
-    public void addActivationCode(Session session, final String activationCode) throws RepositoryException {
-    	addActivationCode(session, null, activationCode, null);
-    }
+	public void addActivationCode(Session session, final String activationCode) throws RepositoryException {
+		addActivationCode(session, null, activationCode, null);
+	}
 
-    public void addActivationCode(Session session, final String activationCode, @SuppressWarnings("rawtypes") Map fields) throws RepositoryException {
-    	addActivationCode(session, null, activationCode, fields);
-    }
+	public void addActivationCode(Session session, final String activationCode, @SuppressWarnings("rawtypes") Map fields) throws RepositoryException {
+		addActivationCode(session, null, activationCode, fields);
+	}
 
-    
-    public void addActivationCode(Session session, String userName, final String activationCode) throws RepositoryException {
-    	addActivationCode(session, userName, activationCode, null);
-    }
 
-    public void addActivationCode(Session session, String userName, final String activationCode, @SuppressWarnings("rawtypes") Map fields)
-            throws RepositoryException {
-        String prop = null;
+	public void addActivationCode(Session session, String userName, final String activationCode) throws RepositoryException {
+		addActivationCode(session, userName, activationCode, null);
+	}
 
-        try {
+	public void addActivationCode(Session session, String userName, final String activationCode, @SuppressWarnings("rawtypes") Map fields)
+			throws RepositoryException {
+		String prop = null;
+
+		try {
 			Node activationNode = session.getRootNode().getNode(activationPath).addNode(activationCode,"nt:unstructured");
-            activationNode.setProperty("sling:resourceType", "liveSense/ActivationCode");
-            if (userName != null) activationNode.setProperty("user", userName);
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.SECOND, activationExpire.intValue());
-            activationNode.setProperty("expire", cal.getTimeInMillis());
-            
-            if (fields != null) {
-            	try {
+			activationNode.setProperty("sling:resourceType", "liveSense/ActivationCode");
+			if (userName != null) activationNode.setProperty("user", userName);
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.SECOND, activationExpire.intValue());
+			activationNode.setProperty("expire", cal.getTimeInMillis());
+
+			if (fields != null) {
+				try {
 					JcrNodeTransformer.transformMapToNode(activationNode, fields, null);
 				} catch (InstantiationException e) {
 					log.error("Error converting map to node", e);
@@ -168,20 +168,20 @@ public class ActivationServiceImpl implements ActivationService {
 				} catch (NoSuchMethodException e) {
 					log.error("Error converting map to node", e);
 				}
-            }
+			}
    
-            if (session.hasPendingChanges()) {
-                session.save();
-            }
+			if (session.hasPendingChanges()) {
+				session.save();
+			}
 
-        } catch (RepositoryException e) {
-            throw e;
-        } finally {
-        }
-    }
+		} catch (RepositoryException e) {
+			throw e;
+		} finally {
+		}
+	}
 
-    public JcrNodeWrapper getActivationFields(Session session, String activationCode) throws RepositoryException {
-        try {
+	public JcrNodeWrapper getActivationFields(Session session, String activationCode) throws RepositoryException {
+		try {
 			if (!session.getRootNode().hasNode(activationPath))
 				return null;
 			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
@@ -189,17 +189,17 @@ public class ActivationServiceImpl implements ActivationService {
 			
 			return new JcrNodeWrapper(session.getRootNode().getNode(activationPath).getNode(activationCode));
 		} catch (RepositoryException e) {
-            throw e;
-        } finally {
-        }
-    }
-    
-    public boolean checkActivationCode(Session session, String userName, String activationCode)
-            throws 
-            RepositoryException {
-        String prop = null;
+			throw e;
+		} finally {
+		}
+	}
 
-        try {
+	public boolean checkActivationCode(Session session, String userName, String activationCode)
+			throws
+			RepositoryException {
+		String prop = null;
+
+		try {
 			if (!session.getRootNode().hasNode(activationPath))
 				return false;
 			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
@@ -208,33 +208,33 @@ public class ActivationServiceImpl implements ActivationService {
 				return false;
 			return true;
 		} catch (RepositoryException e) {
-            throw e;
-        } finally {
-        }
-    }
+			throw e;
+		} finally {
+		}
+	}
 
-    public boolean checkActivationCode(Session session, String activationCode)
-            throws 
-            RepositoryException {
-        String prop = null;
+	public boolean checkActivationCode(Session session, String activationCode)
+			throws
+			RepositoryException {
+		String prop = null;
 
-        try {
+		try {
 			if (!session.getRootNode().hasNode(activationPath))
 				return false;
 			if (!session.getRootNode().getNode(activationPath).hasNode(activationCode))
 				return false;
 			return true;
 		} catch (RepositoryException e) {
-            throw e;
-        } finally {
-        }
-    }
+			throw e;
+		} finally {
+		}
+	}
 
-    public boolean removeActivationCode(Session session, String activationCode)
-            throws RepositoryException {
-        String prop = null;
+	public boolean removeActivationCode(Session session, String activationCode)
+			throws RepositoryException {
+		String prop = null;
 
-        try {
+		try {
 			if (!session.getRootNode().hasNode(activationPath)) {
 				return false;
 			}
@@ -246,8 +246,8 @@ public class ActivationServiceImpl implements ActivationService {
 			}
 
 		} catch (RepositoryException e) {
-            throw e;
-        } finally {
-        }
-    }
+			throw e;
+		} finally {
+		}
+	}
 }

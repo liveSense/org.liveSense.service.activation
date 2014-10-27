@@ -17,14 +17,11 @@
 
 package org.liveSense.service.mail.activation;
 
-import java.util.Map;
+import org.liveSense.misc.jcrWrapper.JcrNodeWrapper;
 
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
-
-import org.liveSense.core.wrapper.JcrNodeWrapper;
-import org.liveSense.service.securityManager.exceptions.PrincipalIsNotUserException;
-import org.liveSense.service.securityManager.exceptions.UserNotExistsException;
+import java.util.Map;
 
 /**
  *
